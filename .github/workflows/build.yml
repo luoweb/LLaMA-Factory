@@ -19,7 +19,7 @@ env:
   QUAY_REGISTRY: ${{ vars.QUAY_REGISTRY  || 'quay.io' }}
   
   BLOCKAI_IMAGE_NAME: ${{ vars.BLOCKAI_IMAGE_NAME || 'luweb/llamafactory' }}
-  DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USER }} # For safty consideration, passing registry password by github action secrets is needed.
+  DOCKERHUB_USER: ${{ vars.DOCKERHUB_USER || 'luoweb'}} # For safty consideration, passing registry password by github action secrets is needed.
   DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }} 
   QUAY_USER: ${{ vars.QUAY_USERNAME || 'luweb'}} # 
   QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }} # 
