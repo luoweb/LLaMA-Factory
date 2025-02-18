@@ -1,4 +1,4 @@
-# Copyright 2024 the LlamaFactory team.
+# Copyright 2025 the LlamaFactory team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,108 +16,32 @@ import json
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Literal, Optional, Sequence, Set, Tuple, Union
+from typing import List, Optional, Union
 
+from typing_extensions import override
 
-SLOTS = Sequence[Union[str, Set[str], Dict[str, str]]]
-
-
-DEFAULT_TOOL_PROMPT = (
-    "You have access to the following tools:\n{tool_text}"
-    "Use the following format if using a tool:\n"
-    "```\n"
-    "Action: tool name (one of [{tool_names}]).\n"
-    "Action Input: the input to the tool, in a JSON format representing the kwargs "
-    """(e.g. ```{{"input": "hello world", "num_beams": 5}}```).\n"""
-    "```\n"
-)
-
-
-GLM4_TOOL_PROMPT = (
-    "你是一个名为 ChatGLM 的人工智能助手。你是基于智谱AI训练的语言模型 GLM-4 模型开发的，"
-    "你的任务是针对用户的问题和要求提供适当的答复和支持。# 可用工具{tool_text}"
-)
-
-
-def default_tool_formatter(tools: List[Dict[str, Any]]) -> str:
-    tool_text = ""
-    tool_names = []
-    for tool in tools:
-        param_text = ""
-        for name, param in tool["parameters"]["properties"].items():
-            required = ", required" if name in tool["parameters"].get("required", []) else ""
-            enum = ", should be one of [{}]".format(", ".join(param["enum"])) if param.get("enum", None) else ""
-            items = (
-                ", where each item should be {}".format(param["items"].get("type", "")) if param.get("items") else ""
-            )
-            param_text += "  - {name} ({type}{required}): {desc}{enum}{items}\n".format(
-                name=name,
-                type=param.get("type", ""),
-                required=required,
-                desc=param.get("description", ""),
-                enum=enum,
-                items=items,
-            )
-
-        tool_text += "> Tool Name: {name}\nTool Description: {desc}\nTool Args:\n{args}\n".format(
-            name=tool["name"], desc=tool.get("description", ""), args=param_text
-        )
-        tool_names.append(tool["name"])
-
-    return DEFAULT_TOOL_PROMPT.format(tool_text=tool_text, tool_names=", ".join(tool_names))
-
-
-def default_tool_extractor(content: str) -> Union[str, List[Tuple[str, str]]]:
-    regex = re.compile(r"Action:\s*([a-zA-Z0-9_]+)\s*Action Input:\s*(.+?)(?=\s*Action:|\s*$)", re.DOTALL)
-    action_match: List[Tuple[str, str]] = re.findall(regex, content)
-    if not action_match:
-        return content
-
-    results = []
-    for match in action_match:
-        tool_name = match[0].strip()
-        tool_input = match[1].strip().strip('"').strip("```")
-        try:
-            arguments = json.loads(tool_input)
-            results.append((tool_name, json.dumps(arguments, ensure_ascii=False)))
-        except json.JSONDecodeError:
-            return content
-
-    return results
-
-
-def glm4_tool_formatter(tools: List[Dict[str, Any]]) -> str:
-    tool_text = ""
-    for tool in tools:
-        tool_text += "\n\n## {name}\n\n{body}\n在调用上述函数时，请使用 Json 格式表示调用的参数。".format(
-            name=tool["name"], body=json.dumps(tool, indent=4, ensure_ascii=False)
-        )
-
-    return GLM4_TOOL_PROMPT.format(tool_text=tool_text)
-
-
-def glm4_tool_extractor(content: str) -> Union[str, List[Tuple[str, str]]]:
-    if "\n" not in content:
-        return content
-
-    tool_name, tool_input = content.split("\n", maxsplit=1)
-    try:
-        arguments = json.loads(tool_input)
-    except json.JSONDecodeError:
-        return content
-
-    return [(tool_name, json.dumps(arguments, ensure_ascii=False))]
+from .data_utils import SLOTS
+from .tool_utils import FunctionCall, get_tool_utils
 
 
 @dataclass
 class Formatter(ABC):
     slots: SLOTS = field(default_factory=list)
-    tool_format: Optional[Literal["default", "glm4"]] = None
+    tool_format: Optional[str] = None
 
     @abstractmethod
-    def apply(self, **kwargs) -> SLOTS: ...
+    def apply(self, **kwargs) -> SLOTS:
+        r"""
+        Forms a list of slots according to the inputs to encode.
+        """
+        ...
 
-    def extract(self, content: str) -> Union[str, List[Tuple[str, str]]]:
+    def extract(self, content: str) -> Union[str, List["FunctionCall"]]:
+        r"""
+        Extract a list of tuples from the response message if using tools.
+
+        Each tuple consists of function name and function arguments.
+        """
         raise NotImplementedError
 
 
@@ -132,6 +56,7 @@ class EmptyFormatter(Formatter):
         if has_placeholder:
             raise ValueError("Empty formatter should not contain any placeholder.")
 
+    @override
     def apply(self, **kwargs) -> SLOTS:
         return self.slots
 
@@ -147,84 +72,74 @@ class StringFormatter(Formatter):
         if not has_placeholder:
             raise ValueError("A placeholder is required in the string formatter.")
 
+    @override
     def apply(self, **kwargs) -> SLOTS:
         elements = []
         for slot in self.slots:
             if isinstance(slot, str):
                 for name, value in kwargs.items():
                     if not isinstance(value, str):
-                        raise RuntimeError("Expected a string, got {}".format(value))
+                        raise RuntimeError(f"Expected a string, got {value}")
 
                     slot = slot.replace("{{" + name + "}}", value, 1)
                 elements.append(slot)
             elif isinstance(slot, (dict, set)):
                 elements.append(slot)
             else:
-                raise RuntimeError("Input must be string, set[str] or dict[str, str], got {}".format(type(slot)))
+                raise RuntimeError(f"Input must be string, set[str] or dict[str, str], got {type(slot)}.")
 
         return elements
 
 
 @dataclass
-class FunctionFormatter(Formatter):
+class FunctionFormatter(StringFormatter):
     def __post_init__(self):
-        has_name, has_args = False, False
-        for slot in filter(lambda s: isinstance(s, str), self.slots):
-            if "{{name}}" in slot:
-                has_name = True
-            if "{{arguments}}" in slot:
-                has_args = True
+        super().__post_init__()
+        self.tool_utils = get_tool_utils(self.tool_format)
 
-        if not has_name or not has_args:
-            raise ValueError("Name and arguments placeholders are required in the function formatter.")
-
+    @override
     def apply(self, **kwargs) -> SLOTS:
-        content = kwargs.pop("content")
-        functions: List[Tuple[str, str]] = []
+        content: str = kwargs.pop("content")
+        regex = re.compile(r"<think>(.*)</think>", re.DOTALL)
+        thought = re.search(regex, content)
+        if thought:
+            content = content.replace(thought.group(0), "")
+
+        functions: List["FunctionCall"] = []
         try:
             tool_calls = json.loads(content)
             if not isinstance(tool_calls, list):  # parallel function call
                 tool_calls = [tool_calls]
 
             for tool_call in tool_calls:
-                functions.append((tool_call["name"], json.dumps(tool_call["arguments"], ensure_ascii=False)))
+                functions.append(
+                    FunctionCall(tool_call["name"], json.dumps(tool_call["arguments"], ensure_ascii=False))
+                )
 
         except json.JSONDecodeError:
-            functions = []
+            raise RuntimeError(f"Invalid JSON format in function message: {str([content])}.")  # flat string
 
-        elements = []
-        for name, arguments in functions:
-            for slot in self.slots:
-                if isinstance(slot, str):
-                    slot = slot.replace("{{name}}", name).replace("{{arguments}}", arguments)
-                    elements.append(slot)
-                elif isinstance(slot, (dict, set)):
-                    elements.append(slot)
-                else:
-                    raise RuntimeError("Input must be string, set[str] or dict[str, str], got {}".format(type(slot)))
+        function_str = self.tool_utils.function_formatter(functions)
+        if thought:
+            function_str = thought.group(1) + function_str
 
-        return elements
+        return super().apply(content=function_str)
 
 
 @dataclass
 class ToolFormatter(Formatter):
     def __post_init__(self):
-        if self.tool_format == "default":
-            self._tool_formatter = default_tool_formatter
-            self._tool_extractor = default_tool_extractor
-        elif self.tool_format == "glm4":
-            self._tool_formatter = glm4_tool_formatter
-            self._tool_extractor = glm4_tool_extractor
-        else:
-            raise NotImplementedError("Tool format {} was not found.".format(self.tool_format))
+        self.tool_utils = get_tool_utils(self.tool_format)
 
+    @override
     def apply(self, **kwargs) -> SLOTS:
         content = kwargs.pop("content")
         try:
             tools = json.loads(content)
-            return [self._tool_formatter(tools) if len(tools) != 0 else ""]
+            return [self.tool_utils.tool_formatter(tools) if len(tools) != 0 else ""]
         except json.JSONDecodeError:
-            return [""]
+            raise RuntimeError(f"Invalid JSON format in tool description: {str([content])}.")  # flat string
 
-    def extract(self, content: str) -> Union[str, List[Tuple[str, str]]]:
-        return self._tool_extractor(content)
+    @override
+    def extract(self, content: str) -> Union[str, List["FunctionCall"]]:
+        return self.tool_utils.tool_extractor(content)

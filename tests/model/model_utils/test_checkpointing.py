@@ -1,4 +1,4 @@
-# Copyright 2024 the LlamaFactory team.
+# Copyright 2025 the LlamaFactory team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,14 +14,14 @@
 
 import os
 
+import pytest
 import torch
 
 from llamafactory.extras.misc import get_current_device
-from llamafactory.hparams import get_train_args
-from llamafactory.model import load_model, load_tokenizer
+from llamafactory.train.test_utils import load_train_model
 
 
-TINY_LLAMA = os.environ.get("TINY_LLAMA", "llamafactory/tiny-random-Llama-3")
+TINY_LLAMA = os.getenv("TINY_LLAMA", "llamafactory/tiny-random-Llama-3")
 
 TRAIN_ARGS = {
     "model_name_or_path": TINY_LLAMA,
@@ -40,35 +40,28 @@ TRAIN_ARGS = {
 }
 
 
-def test_checkpointing_enable():
-    model_args, _, _, finetuning_args, _ = get_train_args({"disable_gradient_checkpointing": False, **TRAIN_ARGS})
-    tokenizer_module = load_tokenizer(model_args)
-    model = load_model(tokenizer_module["tokenizer"], model_args, finetuning_args, is_trainable=True)
+@pytest.mark.parametrize("disable_gradient_checkpointing", [False, True])
+def test_vanilla_checkpointing(disable_gradient_checkpointing: bool):
+    model = load_train_model(disable_gradient_checkpointing=disable_gradient_checkpointing, **TRAIN_ARGS)
     for module in filter(lambda m: hasattr(m, "gradient_checkpointing"), model.modules()):
-        assert getattr(module, "gradient_checkpointing") is True
+        assert getattr(module, "gradient_checkpointing") != disable_gradient_checkpointing
 
 
-def test_checkpointing_disable():
-    model_args, _, _, finetuning_args, _ = get_train_args({"disable_gradient_checkpointing": True, **TRAIN_ARGS})
-    tokenizer_module = load_tokenizer(model_args)
-    model = load_model(tokenizer_module["tokenizer"], model_args, finetuning_args, is_trainable=True)
+def test_unsloth_gradient_checkpointing():
+    model = load_train_model(use_unsloth_gc=True, **TRAIN_ARGS)
     for module in filter(lambda m: hasattr(m, "gradient_checkpointing"), model.modules()):
-        assert getattr(module, "gradient_checkpointing") is False
+        assert module._gradient_checkpointing_func.__self__.__name__ == "UnslothGradientCheckpointing"
 
 
 def test_upcast_layernorm():
-    model_args, _, _, finetuning_args, _ = get_train_args({"upcast_layernorm": True, **TRAIN_ARGS})
-    tokenizer_module = load_tokenizer(model_args)
-    model = load_model(tokenizer_module["tokenizer"], model_args, finetuning_args, is_trainable=True)
+    model = load_train_model(upcast_layernorm=True, **TRAIN_ARGS)
     for name, param in model.named_parameters():
         if param.ndim == 1 and "norm" in name:
             assert param.dtype == torch.float32
 
 
 def test_upcast_lmhead_output():
-    model_args, _, _, finetuning_args, _ = get_train_args({"upcast_lmhead_output": True, **TRAIN_ARGS})
-    tokenizer_module = load_tokenizer(model_args)
-    model = load_model(tokenizer_module["tokenizer"], model_args, finetuning_args, is_trainable=True)
+    model = load_train_model(upcast_lmhead_output=True, **TRAIN_ARGS)
     inputs = torch.randn((1, 16), dtype=torch.float16, device=get_current_device())
     outputs: "torch.Tensor" = model.get_output_embeddings()(inputs)
     assert outputs.dtype == torch.float32
