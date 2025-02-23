@@ -132,7 +132,7 @@ jobs:
           platforms: ${{ env.PLATFORMS }}
           #指定用户/仓库名
           tags: |
-            ${{ env.QUAY_REGISTRY }}/${{ env.BLOCKAI_IMAGE_NAME }}:latest-${{github.event.inputs.pytorch_version}}
+            ${{ env.QUAY_REGISTRY }}/${{ env.BLOCKAI_IMAGE_NAME }}:latest
             ${{ env.QUAY_REGISTRY }}/${{ env.BLOCKAI_IMAGE_NAME }}:${{ env.BUILD_TAG }}-${{github.event.inputs.pytorch_version}}
           labels: ${{ steps.meta.outputs.labels }}
 
@@ -151,7 +151,7 @@ jobs:
           platforms: ${{ env.PLATFORMS }}
           #指定用户/仓库名
           tags: |
-            ${{ env.QUAY_REGISTRY }}/luweb/unsloth:latest-${{github.event.inputs.pytorch_version}}-
+            ${{ env.QUAY_REGISTRY }}/luweb/unsloth:latest
             ${{ env.QUAY_REGISTRY }}/luweb/unsloth:${{ env.BUILD_TAG }}-${{github.event.inputs.pytorch_version}}
           labels: ${{ steps.meta.outputs.labels }}
 
