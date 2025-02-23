@@ -25,6 +25,11 @@ on:
               type: string
               required: true
               default: '24.01'
+          custom_exec:
+              description: 'custom exec shell'
+              type: string
+              required: true
+              default: 'uname -a'
 
 env:
   # Use docker.io for Docker Hub if empty
@@ -64,6 +69,7 @@ jobs:
           sudo rm -rf /opt/ghc
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          ${{github.event.inputs.custom_exec}}
           df -h
 
       - name: Checkout repository
