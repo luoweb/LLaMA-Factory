@@ -34,7 +34,7 @@ RUN if [ -n "$HTTP_PROXY" ]; then \
 # Install the requirements
 # COPY requirements.txt /app
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    uv python install 3.10 && \
+    source $HOME/.local/bin/env && uv python install 3.10 && \
     uv venv && uv python pin 3.10 && \
     pip config set global.index-url "$PIP_INDEX" && \
     pip config set global.extra-index-url "$PIP_INDEX" && \
