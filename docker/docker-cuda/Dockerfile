@@ -34,8 +34,8 @@ RUN if [ -n "$HTTP_PROXY" ]; then \
 COPY requirements.txt /app
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh &&  \
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh && \
-    source $HOME/.local/bin/env && uv python install 3.10 && \
-    uv venv && uv python pin 3.10 && \
+    source $HOME/.local/bin/env && uv python install 3.11 && \
+    uv venv && uv python pin 3.11 && \
     pip config set global.index-url "$PIP_INDEX" && \
     pip config set global.extra-index-url "$PIP_INDEX" && \
     python -m pip install --upgrade pip && \
