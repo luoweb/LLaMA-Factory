@@ -1,7 +1,7 @@
 # Default use the NVIDIA official image with PyTorch 2.3.0
 # https://docs.nvidia.com/deeplearning/frameworks/pytorch-release-notes/index.html
 # ARG BASE_IMAGE=nvcr.io/nvidia/pytorch:24.02-py3
-ARG BASE_IMAGE=nvcr.io/nvidia/pytorch:24.01-py3
+ARG BASE_IMAGE=nvcr.io/nvidia/pytorch:23.01-py3
 FROM ${BASE_IMAGE}
 
 # Define environments
@@ -32,7 +32,10 @@ RUN if [ -n "$HTTP_PROXY" ]; then \
 
 # Install the requirements
 COPY requirements.txt /app
-RUN pip config set global.index-url "$PIP_INDEX" && \
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    uv python install 3.10 && \
+    uv venv && uv python pin 3.10 && \
+    pip config set global.index-url "$PIP_INDEX" && \
     pip config set global.extra-index-url "$PIP_INDEX" && \
     python -m pip install --upgrade pip && \
     if [ -n "$HTTP_PROXY" ]; then \

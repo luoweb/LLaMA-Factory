@@ -24,7 +24,7 @@ on:
               description: 'pytorch version.'
               type: string
               required: true
-              default: '24.01'
+              default: '23.01'
           custom_exec:
               description: 'custom exec shell'
               type: string
