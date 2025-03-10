@@ -38,7 +38,7 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh &&  \
     ln -s $HOME/.cargo/bin/cargo /usr/local/bin && \
     ln -s $HOME/.cargo/bin/rustup /usr/local/bin && \
     ln -s $HOME/.local/bin/uv /usr/local/bin && \
-    rustup install 1.79.0 && \
+    rustup install 1.79.0 && export PATH=$HOME/.cargo/bin:$PATH && \
     export PATH="$HOME/.local/bin:$PATH" && uv python install 3.11 && \
     uv venv && uv python pin 3.11 && \
     pip config set global.index-url "$PIP_INDEX" && \

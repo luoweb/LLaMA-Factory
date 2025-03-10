@@ -36,16 +36,12 @@ RUN apt-get update -y && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y software-properties-common && \
     DEBIAN_FRONTEND=noninteractive add-apt-repository -y ppa:deadsnakes/ppa && \
     apt-get update -y && \
-    apt-get install --no-install-recommends -y python3.11 python3.11-venv python3.11-dev python3.11-distutils && \
-    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
-    update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 && \
-    # apt-get install --no-install-recommends -y curl && \
-    # apt-get install --no-install-recommends -y cmake g++ git pkg-config libfreetype6-dev libfontconfig1-dev libxcb-xfixes0-dev libxkbcommon-dev python3 cargo && \
-    # apt-get install --no-install-recommends -y libpq-dev && \
-    # apt-get install --no-install-recommends -y vim openssh-server imagemagick net-tools netcat-traditional && \
-    # apt-get install --no-install-recommends -y libpq-dev && \
-    # apt-get install --no-install-recommends -y python3.11-venv && \
-    # apt-get install --no-install-recommends -y libpq-dev && \ 
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.12 python3.12-venv python3.12-dev python3.12-distutils && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3.12 1 && \
+    curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
+    python3.12 get-pip.py && \
+    # python3 get-pip.py --user
     echo "python upgrade finished"
 
 RUN ls -l /usr/local && curl -LsSf https://astral.sh/uv/install.sh | sh &&  \
