@@ -32,14 +32,30 @@ RUN if [ -n "$HTTP_PROXY" ]; then \
 
 # Install the requirements
 COPY requirements.txt /app
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh &&  \
+RUN apt-get update -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y software-properties-common && \
+    DEBIAN_FRONTEND=noninteractive add-apt-repository -y ppa:deadsnakes/ppa && \
+    apt-get update -y && \
+    apt-get install --no-install-recommends -y python3.11 python3.11-venv python3.11-dev python3.11-distutils && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 && \
+    # apt-get install --no-install-recommends -y curl && \
+    # apt-get install --no-install-recommends -y cmake g++ git pkg-config libfreetype6-dev libfontconfig1-dev libxcb-xfixes0-dev libxkbcommon-dev python3 cargo && \
+    # apt-get install --no-install-recommends -y libpq-dev && \
+    # apt-get install --no-install-recommends -y vim openssh-server imagemagick net-tools netcat-traditional && \
+    # apt-get install --no-install-recommends -y libpq-dev && \
+    # apt-get install --no-install-recommends -y python3.11-venv && \
+    # apt-get install --no-install-recommends -y libpq-dev && \ 
+    echo "python upgrade finished"
+
+RUN ls -l /usr/local && curl -LsSf https://astral.sh/uv/install.sh | sh &&  \
     curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path --profile minimal && \
-    ln -s $HOME/.cargo/bin/cargo /usr/local/bin && \
-    ln -s $HOME/.cargo/bin/rustup /usr/local/bin && \
-    ln -s $HOME/.local/bin/uv /usr/local/bin && \
-    rustup install 1.79.0 && \
-    export PATH="$HOME/.local/bin:$PATH" && uv python install 3.11 && \
-    uv venv && uv python pin 3.11 && \
+    ln -s $HOME/.cargo/bin/cargo /usr/local/bin/cargo && \
+    ln -s $HOME/.cargo/bin/rustup /usr/local/bin/rustup && \
+    ln -s $HOME/.local/bin/uv /usr/local/bin/uv && \
+    rustup install 1.79.0 && rustc -V && cargo -V && \
+    # export PATH="$HOME/.local/bin:$PATH" && uv python install 3.11 && \
+    # uv venv && uv python pin 3.11 && \
     pip config set global.index-url "$PIP_INDEX" && \
     pip config set global.extra-index-url "$PIP_INDEX" && \
     python -m pip install --upgrade pip && \
