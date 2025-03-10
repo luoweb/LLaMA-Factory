@@ -49,11 +49,13 @@ RUN apt-get update -y && \
     echo "python upgrade finished"
 
 RUN ls -l /usr/local && curl -LsSf https://astral.sh/uv/install.sh | sh &&  \
-    curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path --profile minimal && \
-    ln -s $HOME/.cargo/bin/cargo /usr/local/bin/cargo && \
-    ln -s $HOME/.cargo/bin/rustup /usr/local/bin/rustup && \
+    # curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path --profile minimal && \
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
+    ln -s $HOME/.cargo/bin/cargo /usr/local/bin/cargo && export PATH=$HOME/.cargo/bin:$PATH && \
+    ln -s $HOME/.cargo/bin/rustup /usr/local/bin/rustup && export PATH=$HOME/.cargo/bin:$PATH && \
     ln -s $HOME/.local/bin/uv /usr/local/bin/uv && \
-    rustup install 1.79.0 && rustc -V && cargo -V && \
+    rustup install 1.79.0 && \
+    export PATH=$HOME/.cargo/bin:$PATH && cargo -V && rustc -V && \
     # export PATH="$HOME/.local/bin:$PATH" && uv python install 3.11 && \
     # uv venv && uv python pin 3.11 && \
     pip config set global.index-url "$PIP_INDEX" && \
