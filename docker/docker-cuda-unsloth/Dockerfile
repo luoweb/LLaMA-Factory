@@ -35,9 +35,9 @@ RUN if [ -n "$HTTP_PROXY" ]; then \
 # COPY requirements.txt /app
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh &&  \
     curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path --profile minimal && \
-    sudo ln -s $HOME/.cargo/bin/cargo /usr/local/bin && \
-    sudo ln -s $HOME/.cargo/bin/rustup /usr/local/bin && \
-    sudo ln -s $HOME/.local/bin/uv /usr/local/bin && \
+    ln -s $HOME/.cargo/bin/cargo /usr/local/bin && \
+    ln -s $HOME/.cargo/bin/rustup /usr/local/bin && \
+    ln -s $HOME/.local/bin/uv /usr/local/bin && \
     rustup install 1.79.0 && \
     export PATH="$HOME/.local/bin:$PATH" && uv python install 3.11 && \
     uv venv && uv python pin 3.11 && \
