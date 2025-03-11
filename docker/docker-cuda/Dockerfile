@@ -40,6 +40,10 @@ RUN apt-get update -y && \
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 && \
     update-alternatives --install /usr/bin/python python /usr/bin/python3.12 1 && \
     curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
+    pip install --upgrade setuptools && \
+    pip install --upgrade pip && \
+    # pip uninstall -y setuptools && \
+    # pip install setuptools && \
     python3.12 get-pip.py && \
     # python3 get-pip.py --user
     echo "python upgrade finished"
