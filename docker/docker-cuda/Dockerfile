@@ -36,15 +36,15 @@ RUN apt-get update -y && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y software-properties-common && \
     DEBIAN_FRONTEND=noninteractive add-apt-repository -y ppa:deadsnakes/ppa && \
     apt-get update -y && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.12 python3.12-venv python3.12-dev python3-distutils && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.12 python3.12-venv python3.12-dev python3-distutils python3-pip && \
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 && \
     update-alternatives --install /usr/bin/python python /usr/bin/python3.12 1 && \
     curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
-    pip install --upgrade setuptools && \
-    pip install --upgrade pip && \
+    # pip install --upgrade setuptools && \
+    # pip install --upgrade pip wheel && \
     # pip uninstall -y setuptools && \
     # pip install setuptools && \
-    python3.12 get-pip.py && \
+    python3.12 get-pip.py --break-system-packages && \
     # python3 get-pip.py --user
     echo "python upgrade finished"
 

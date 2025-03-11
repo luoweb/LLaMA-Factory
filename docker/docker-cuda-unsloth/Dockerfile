@@ -43,7 +43,7 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh &&  \
     uv venv && uv python pin 3.11 && \
     pip config set global.index-url "$PIP_INDEX" && \
     pip config set global.extra-index-url "$PIP_INDEX" && \
-    python -m pip install --upgrade pip && \
+    python -m pip install --upgrade pip wheel && \
     if [ -n "$HTTP_PROXY" ]; then \
     python -m pip install --proxy=$HTTP_PROXY "unsloth[cu118-torch240] @ git+https://github.com/unslothai/unsloth.git"; \
     else \
