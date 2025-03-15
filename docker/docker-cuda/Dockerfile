@@ -32,12 +32,42 @@ RUN if [ -n "$HTTP_PROXY" ]; then \
 # Install the requirements
 COPY requirements.txt /app
 RUN pip config set global.index-url "$PIP_INDEX" && \
+RUN apt-get update -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y software-properties-common && \
+    DEBIAN_FRONTEND=noninteractive add-apt-repository -y ppa:deadsnakes/ppa && \
+    apt-get update -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y python3.12 python3.12-venv python3.12-dev python3-distutils python3-pip && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3.12 1 && \
+    update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1 && \
+    update-alternatives --config pip && \
+    python3.12 -m ensurepip --upgrade && \
+    curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
+    # pip install --upgrade setuptools && \
+    # pip install --upgrade pip wheel && \
+    # pip uninstall -y setuptools && \
+    # pip install setuptools && \
+    python3.12 get-pip.py --break-system-packages && \
+    # python3 get-pip.py --user
+    echo "python upgrade finished"
+
+RUN ls -l /usr/local && curl -LsSf https://astral.sh/uv/install.sh | sh &&  \
+    # curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path --profile minimal && \
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
+    ln -s $HOME/.cargo/bin/cargo /usr/local/bin/cargo && export PATH=$HOME/.cargo/bin:$PATH && \
+    ln -s $HOME/.cargo/bin/rustup /usr/local/bin/rustup && export PATH=$HOME/.cargo/bin:$PATH && \
+    ln -s $HOME/.local/bin/uv /usr/local/bin/uv && \
+    rustup install 1.79.0 && \
+    export PATH=$HOME/.cargo/bin:$PATH && cargo -V && rustc -V && \
+    # export PATH="$HOME/.local/bin:$PATH" && uv python install 3.11 && \
+    # uv venv && uv python pin 3.11 && \
+    pip config set global.index-url "$PIP_INDEX" && \
     pip config set global.extra-index-url "$PIP_INDEX" && \
     python -m pip install --upgrade pip && \
     if [ -n "$HTTP_PROXY" ]; then \
-        python -m pip install --proxy=$HTTP_PROXY -r requirements.txt; \
+        pip install --proxy=$HTTP_PROXY -r requirements.txt; \
     else \
-        python -m pip install -r requirements.txt; \
+        pip install -r requirements.txt; \
     fi
 
 # Copy the rest of the application into the image
